@@ -13,6 +13,7 @@ lsof -ti:8000 -ti:5173 | xargs kill -9 2>/dev/null || true
 # Backend
 cd backend
 source .venv/bin/activate
+python app/seed.py
 uvicorn app.main:app --reload --port 8000 &
 BACKEND_PID=$!
 cd ..

@@ -1,9 +1,82 @@
-def some_scoring_service(cv_content, job_reqs):
-    # turn into some llm service in another folder and file
-    return {
-        "overall_score": 75,
-        "matched_requirements": ["Python", "FastAPI"],
-        "gaps": ["TypeScript depth", "No fintech experience"],
-        "rationale": "Strong backend match, some gaps in frontend depth.",
-        "screening_questions": ["Can you walk me through a time you worked with ambiguous requirements?"]
+import os
+import anthropic
+from app.schemas.scoring import ScoreResponse
+from pydantic import ValidationError
+
+client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+
+class ScoringError(Exception):
+    """Raised when the scoring service fails to produce a valid result."""
+
+SCORING_TOOL = {
+    "name": "score_candidate",
+    "description": "Score a candidate against a job description and generate follow-up screening questions based on identified gaps.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "overall_score": {
+                "type": "integer",
+                "description": "Overall match score from 0 to 100"
+            },
+            "matched_requirements": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "List of job requirements the candidate clearly meets"
+            },
+            "gaps": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "List of job requirements the candidate does not meet or where evidence is weak"
+            },
+            "rationale": {
+                "type": "string",
+                "description": "A concise explanation of the overall score referencing specific evidence from the CV"
+            },
+            "screening_questions": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Follow-up questions for a recruiter to ask this candidate, targeting the specific gaps identified. Only generate questions where a gap is significant enough to warrant probing. Not every gap needs a question."
+            }
+        },
+        "required": ["overall_score", "matched_requirements", "gaps", "rationale", "screening_questions"]
     }
+}
+
+
+def score_candidate(cv_content: str, job_reqs: str) -> ScoreResponse:
+    prompt = f"""You are an expert technical recruiter. Score the following candidate against the job requirements.
+
+                Job Requirements:
+                {job_reqs}
+
+                Candidate CV:
+                {cv_content}
+
+                Be precise and evidence-based. Only claim a requirement is matched if there is clear evidence in the CV. Flag gaps honestly even if the candidate is otherwise strong."""
+    try:
+        response = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=1024,
+            tools=[SCORING_TOOL],
+            tool_choice={"type": "tool", "name": "score_candidate"},
+            messages=[{"role": "user", "content": prompt}]
+        )
+
+        tool_input = response.content[0].input
+
+        return ScoreResponse(
+            job_id=0,
+            candidate_id=0,
+            overall_score=tool_input["overall_score"],
+            matched_requirements=tool_input["matched_requirements"],
+            gaps=tool_input["gaps"],
+            rationale=tool_input["rationale"],
+            screening_questions=tool_input["screening_questions"]
+        )
+
+    except anthropic.APIError as e:
+        raise ScoringError(f"Anthropic API error: {str(e)}")
+    except (IndexError, KeyError) as e:
+        raise ScoringError(f"Unexpected response shape from Anthropic: {str(e)}")
+    except ValidationError as e:
+        raise ScoringError(f"LLM response failed validation: {e.errors()}")

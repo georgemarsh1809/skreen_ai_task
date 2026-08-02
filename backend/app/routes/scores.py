@@ -2,8 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.db import Score, Job, Candidate
-from app.services.scoring import some_scoring_service
+from app.services.scoring import score_candidate, ScoringError
 from app.schemas.scoring import ScoreRequest, ScoreResponse
+
 
 router = APIRouter(prefix="/scores", tags=["scores"])
 
@@ -20,16 +21,20 @@ def get_score(req: ScoreRequest, db: Session = Depends(get_db)):
         
     candidate_cv_content = candidate.cv_content
 
-    result = some_scoring_service(job_reqs=job.requirements, cv_content=candidate_cv_content)
+    try:
+        result = score_candidate(job_reqs=job.requirements, cv_content=candidate_cv_content)
+    except ScoringError as e:
+          raise HTTPException(status_code=502, detail=str(e))
 
+          
     score = Score(
         job_id=req.job_id,
         candidate_id=req.candidate_id,
-        overall_score=result["overall_score"],
-        matched_requirements=result["matched_requirements"],
-        gaps=result["gaps"],
-        rationale=result["rationale"],
-        screening_questions=result["screening_questions"]
+        overall_score=result.overall_score,
+        matched_requirements=result.matched_requirements,
+        gaps=result.gaps,
+        rationale=result.rationale,
+        screening_questions=result.screening_questions
     )
 
     db.add(score)
