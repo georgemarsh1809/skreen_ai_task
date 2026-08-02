@@ -47,8 +47,6 @@ async def create_score(req: ScoreRequest, db: Session = Depends(get_db)):
 @router.get('/job/{job_id}', response_model=list[ScoreResponse])
 def get_scores_for_job(job_id: int, db: Session = Depends(get_db)):
     scores = db.query(Score).filter(Score.job_id == job_id).order_by(Score.overall_score.desc()).all()
-    if not scores:
-        raise HTTPException(status_code=404, detail=f"Scores not found for job ID: {job_id}")
     return scores 
 
 

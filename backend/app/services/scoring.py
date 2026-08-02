@@ -54,7 +54,7 @@ async def score_candidate(cv_content: str, job_reqs: str) -> ScoreResponse:
 
                 Be precise and evidence-based. Only claim a requirement is matched if there is clear evidence in the CV. Flag gaps honestly even if the candidate is otherwise strong."""
     try:
-        response = client.messages.create(
+        response = await client.messages.create(
             model="claude-sonnet-4-6",
             max_tokens=1024,
             tools=[SCORING_TOOL],
