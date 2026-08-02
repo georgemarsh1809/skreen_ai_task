@@ -1,9 +1,9 @@
 import os
-import anthropic
+from anthropic import AsyncAnthropic, APIError
 from app.schemas.scoring import ScoreResponse
 from pydantic import ValidationError
 
-client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+client = AsyncAnthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
 class ScoringError(Exception):
     """Raised when the scoring service fails to produce a valid result."""
@@ -43,7 +43,7 @@ SCORING_TOOL = {
 }
 
 
-def score_candidate(cv_content: str, job_reqs: str) -> ScoreResponse:
+async def score_candidate(cv_content: str, job_reqs: str) -> ScoreResponse:
     prompt = f"""You are an expert technical recruiter. Score the following candidate against the job requirements.
 
                 Job Requirements:
@@ -74,7 +74,7 @@ def score_candidate(cv_content: str, job_reqs: str) -> ScoreResponse:
             screening_questions=tool_input["screening_questions"]
         )
 
-    except anthropic.APIError as e:
+    except APIError as e:
         raise ScoringError(f"Anthropic API error: {str(e)}")
     except (IndexError, KeyError) as e:
         raise ScoringError(f"Unexpected response shape from Anthropic: {str(e)}")

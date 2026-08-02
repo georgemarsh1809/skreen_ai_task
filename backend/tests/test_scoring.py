@@ -11,7 +11,7 @@ def make_mock_response(tool_input: dict):
 
 
 @patch("app.services.scoring.client")
-def test_valid_response_returns_score(mock_client):
+async def test_valid_response_returns_score(mock_client):
     mock_client.messages.create.return_value = make_mock_response({
         "overall_score": 85,
         "matched_requirements": ["Python", "FastAPI"],
@@ -20,7 +20,7 @@ def test_valid_response_returns_score(mock_client):
         "screening_questions": ["Can you describe your experience with container orchestration?"]
     })
 
-    result = score_candidate(cv_content="Python developer with FastAPI experience.", job_reqs="Python, FastAPI, Kubernetes")
+    result = await score_candidate(cv_content="Python developer with FastAPI experience.", job_reqs="Python, FastAPI, Kubernetes")
 
     assert result.overall_score == 85
     assert "Python" in result.matched_requirements
@@ -28,7 +28,7 @@ def test_valid_response_returns_score(mock_client):
 
 
 @patch("app.services.scoring.client")
-def test_score_out_of_range_raises_scoring_error(mock_client):
+async def test_score_out_of_range_raises_scoring_error(mock_client):
     mock_client.messages.create.return_value = make_mock_response({
         "overall_score": 150,
         "matched_requirements": ["Python"],
@@ -38,11 +38,11 @@ def test_score_out_of_range_raises_scoring_error(mock_client):
     })
 
     with pytest.raises(ScoringError):
-        score_candidate(cv_content="Python developer.", job_reqs="Python, FastAPI")
+        await score_candidate(cv_content="Python developer.", job_reqs="Python, FastAPI")
 
 
 @patch("app.services.scoring.client")
-def test_missing_field_raises_scoring_error(mock_client):
+async def test_missing_field_raises_scoring_error(mock_client):
     mock_client.messages.create.return_value = make_mock_response({
         "overall_score": 75,
         "matched_requirements": ["Python"],
@@ -52,11 +52,11 @@ def test_missing_field_raises_scoring_error(mock_client):
     })
 
     with pytest.raises(ScoringError):
-        score_candidate(cv_content="Python developer.", job_reqs="Python, FastAPI")
+        await score_candidate(cv_content="Python developer.", job_reqs="Python, FastAPI")
 
 
 @patch("app.services.scoring.client")
-def test_api_error_raises_scoring_error(mock_client):
+async def test_api_error_raises_scoring_error(mock_client):
     import anthropic
     mock_client.messages.create.side_effect = anthropic.APIError(
         message="API unavailable",
@@ -65,4 +65,4 @@ def test_api_error_raises_scoring_error(mock_client):
     )
 
     with pytest.raises(ScoringError):
-        score_candidate(cv_content="Python developer.", job_reqs="Python, FastAPI")
+        await score_candidate(cv_content="Python developer.", job_reqs="Python, FastAPI")

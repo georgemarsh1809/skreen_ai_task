@@ -10,7 +10,7 @@ router = APIRouter(prefix="/scores", tags=["scores"])
 
 
 @router.post('/')
-def get_score(req: ScoreRequest, db: Session = Depends(get_db)):
+async def create_score(req: ScoreRequest, db: Session = Depends(get_db)):
     job = db.query(Job).filter(Job.id == req.job_id).first()
     if not job:
             raise HTTPException(status_code=404, detail=f"Job not found")
@@ -22,7 +22,7 @@ def get_score(req: ScoreRequest, db: Session = Depends(get_db)):
     candidate_cv_content = candidate.cv_content
 
     try:
-        result = score_candidate(job_reqs=job.requirements, cv_content=candidate_cv_content)
+        result = await score_candidate(job_reqs=job.requirements, cv_content=candidate_cv_content)
     except ScoringError as e:
           raise HTTPException(status_code=502, detail=str(e))
 
