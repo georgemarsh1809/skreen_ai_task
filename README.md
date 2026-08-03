@@ -105,7 +105,7 @@ pytest -v
 
 **Structured LLM output:** The scoring service uses Anthropic tool use with a
 forced tool choice to guarantee structured output. The model cannot return free
-text — it must populate the tool's input schema. The response is then validated
+text, it must populate the tool's input schema. The response is then validated
 with a Pydantic model before being persisted.
 
 **Error handling:** The service layer raises a custom `ScoringError` for API
@@ -113,20 +113,20 @@ failures, unexpected response shapes, and validation errors. The route layer
 catches this and returns a clean 502 rather than an unhandled 500.
 
 **Async scoring:** The scoring endpoint is `async def` using `AsyncAnthropic`.
-The Anthropic call is I/O bound and can take 1-2 seconds — making it async means
+The Anthropic call is I/O bound and can take 1-2 seconds. Making it async means
 the event loop can handle other requests during the wait. SQLAlchemy remains
 synchronous; the natural next step would be migrating to `AsyncSession` with
 `asyncpg`.
 
 **Screening question design:** Questions are generated in the same LLM call as
 scoring, using the identified gaps as input. The prompt instructs the model to
-always return at least one question regardless of match strength — for strong
+always return at least one question regardless of match strength. For strong
 candidates, questions target areas where CV evidence is thin rather than
 confirmed gaps.
 
 **One candidate per CV:** Candidates are global rather than job-scoped. Adding
 the same candidate to multiple jobs requires a new row. This is a known
-simplification documented here rather than papered over.
+simplification documented here.
 
 ## Known limitations
 
@@ -139,7 +139,7 @@ simplification documented here rather than papered over.
 - SQLAlchemy is synchronous. Sync DB calls inside an async route briefly block
   the event loop. Acceptable at this scale; `AsyncSession` with `asyncpg` would
   be the production fix.
-- Scoring is triggered per candidate. There is no bulk scoring endpoint — this
+- Scoring is triggered per candidate. There is no bulk scoring endpoint. This
   was a deliberate frontend decision to avoid hitting Anthropic rate limits with
   concurrent requests.
 - Voice interview stretch goal not attempted due to time constraints.
