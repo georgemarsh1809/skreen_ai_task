@@ -52,7 +52,9 @@ async def score_candidate(cv_content: str, job_reqs: str) -> ScoreResponse:
                 Candidate CV:
                 {cv_content}
 
-                Be precise and evidence-based. Only claim a requirement is matched if there is clear evidence in the CV. Flag gaps honestly even if the candidate is otherwise strong."""
+                Be precise and evidence-based. Only claim a requirement is matched if there is clear evidence in the CV. Flag gaps honestly even if the candidate is otherwise strong.
+                
+                You must always return at least one screening question regardless of how strong or weak the match is. For strong candidates, focus questions on areas where CV evidence is thin or where depth is unclear. For weak candidates, focus on the most critical gaps."""
     try:
         response = await client.messages.create(
             model="claude-sonnet-4-6",
@@ -79,4 +81,4 @@ async def score_candidate(cv_content: str, job_reqs: str) -> ScoreResponse:
     except (IndexError, KeyError) as e:
         raise ScoringError(f"Unexpected response shape from Anthropic: {str(e)}")
     except ValidationError as e:
-        raise ScoringError(f"LLM response failed validation: {e.errors()}")
+        raise ScoringError(f"LLM response failed validation: {e.errors()}")  
