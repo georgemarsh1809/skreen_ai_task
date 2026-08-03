@@ -13,11 +13,14 @@ export default function App() {
     >([]);
     const [scoringId, setScoringId] = useState<number | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [loadingJobs, setLoadingJobs] = useState(true);
 
     useEffect(() => {
+        setLoadingJobs(true);
         api.getJobs()
             .then(setJobs)
-            .catch(() => setError('Failed to load jobs.'));
+            .catch(() => setError('Failed to load jobs.'))
+            .finally(() => setLoadingJobs(false));
     }, []);
 
     useEffect(() => {
@@ -126,6 +129,7 @@ export default function App() {
                     jobs={jobs}
                     selectedJob={selectedJob}
                     onSelect={setSelectedJob}
+                    loading={loadingJobs}
                 />
 
                 <main
