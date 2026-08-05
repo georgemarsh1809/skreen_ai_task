@@ -14,13 +14,42 @@ export default function App() {
     const [scoringId, setScoringId] = useState<number | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [loadingJobs, setLoadingJobs] = useState(true);
+    const [connecting, setConnecting] = useState(false);
 
     useEffect(() => {
+        let cancelled = false;
         setLoadingJobs(true);
-        api.getJobs()
-            .then(setJobs)
-            .catch(() => setError('Failed to load jobs.'))
-            .finally(() => setLoadingJobs(false));
+
+        async function loadJobs() {
+            const maxAttempts = 3;
+            for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+                try {
+                    const jobs = await api.getJobs();
+                    if (!cancelled) setJobs(jobs);
+                    return;
+                } catch {
+                    if (attempt < maxAttempts) {
+                        if (!cancelled) setConnecting(true);
+                        await new Promise((resolve) =>
+                            setTimeout(resolve, 1500),
+                        );
+                    } else if (!cancelled) {
+                        setError('Failed to load jobs.');
+                    }
+                }
+            }
+        }
+
+        loadJobs().finally(() => {
+            if (!cancelled) {
+                setConnecting(false);
+                setLoadingJobs(false);
+            }
+        });
+
+        return () => {
+            cancelled = true;
+        };
     }, []);
 
     useEffect(() => {
@@ -135,6 +164,19 @@ export default function App() {
                 <main
                     style={{ flex: 1, overflowY: 'auto', padding: '32px 40px' }}
                 >
+                    {connecting && (
+                        <div
+                            style={{
+                                color: 'var(--muted)',
+                                marginTop: 80,
+                                textAlign: 'center',
+                                fontSize: 13,
+                            }}
+                        >
+                            Connecting...
+                        </div>
+                    )}
+
                     {error && (
                         <div
                             style={{
